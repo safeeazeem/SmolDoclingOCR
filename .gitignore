@@ -2,3 +2,5 @@
 venv
 /MISC
 MISC
+/model_cache
+model_cache

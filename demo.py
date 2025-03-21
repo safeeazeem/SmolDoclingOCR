@@ -1,7 +1,7 @@
 import torch
 from io import BytesIO
 from PIL import Image
-
+import os
 from fastapi import FastAPI, File, UploadFile
 from docling_core.types.doc import DoclingDocument
 from docling_core.types.doc.document import DocTagsDocument
@@ -9,6 +9,22 @@ from transformers import AutoProcessor, AutoModelForVision2Seq
 from transformers.image_utils import load_image
 
 app = FastAPI()
+MODEL_DIR = "./model_cache"
+
+def load_model_and_processor():
+    if not os.path.exists(MODEL_DIR):
+        os.makedirs(MODEL_DIR)
+    
+    processor = AutoProcessor.from_pretrained(
+        "ds4sd/SmolDocling-256M-preview", 
+        cache_dir=MODEL_DIR
+    )
+    model = AutoModelForVision2Seq.from_pretrained(
+        "ds4sd/SmolDocling-256M-preview",
+        torch_dtype=torch.bfloat16,
+        cache_dir=MODEL_DIR
+    )
+    return processor, model
 
 @app.post("/ocr")
 async def ocr(file: UploadFile = File(...)):
@@ -18,15 +34,9 @@ async def ocr(file: UploadFile = File(...)):
     
     # Load image using the provided utility function
     image = Image.open(image_file)
+    processor, model = load_model_and_processor()
+
     
-    # Initialize the processor and model
-    processor = AutoProcessor.from_pretrained("ds4sd/SmolDocling-256M-preview")
-    model = AutoModelForVision2Seq.from_pretrained(
-        "ds4sd/SmolDocling-256M-preview",
-        torch_dtype=torch.bfloat16
-    )
-    
-    # Define the conversation/messages for the OCR task
     messages = [
         {
             "role": "user",
